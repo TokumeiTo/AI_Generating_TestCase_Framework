@@ -1,0 +1,51 @@
+# ==========================================
+# 1. System & Environment Files (CRITICAL)
+# ==========================================
+.env
+.env*.local
+*.log
+Note.txt
+
+# ==========================================
+# 2. Node / Playwright Dependencies & Output
+# ==========================================
+node_modules/
+/framework/node_modules/
+/ui/node_modules/
+.pnpm-store/
+package-lock.json
+
+# Playwright Specifics
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright-artifacts/
+
+# Your local framework execution outputs
+/framework/results/
+/framework/data/*.xlsx
+!/framework/data/.gitkeep
+
+# ==========================================
+# 3. Python Backend / AI Service (Virtual Env)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+
+# ==========================================
+# 4. OS & IDE Specifics
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
