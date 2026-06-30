@@ -18,7 +18,6 @@ class ControlPanel {
         .input-ctrl:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,58,138,0.1); }
         .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; max-width: 200px;}
         .btn-primary:hover { background: var(--primary-hover); }
-        /* Added disabled styling */
         .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.7; }
       </style>
       <div class="form-grid">
@@ -39,9 +38,10 @@ class ControlPanel {
           <label><i class="fa-solid fa-comment-dots"></i> Execution Notes</label>
           <input type="text" id="executionNotes" class="input-ctrl" placeholder="Optional context...">
         </div>
+        
         <div class="field-group full-width">
-          <label><i class="fa-solid fa-file-excel"></i> Upload Design Specification Document (.xlsx)</label>
-          <input type="file" id="specFile" class="input-ctrl" accept=".xlsx">
+          <label><i class="fa-solid fa-file-invoice"></i> Upload Design Specification Document (.xlsx, .docx)</label>
+          <input type="file" id="specFile" class="input-ctrl" accept=".xlsx, .docx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
         </div>
       </div>
       <button id="btnGenerate" class="btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Scenarios</button>
@@ -55,7 +55,7 @@ class ControlPanel {
       const fileInput = document.getElementById('specFile');
       const file = fileInput.files[0];
 
-      if (!file) return alert("Please select a design specification file (.xlsx).");
+      if (!file) return alert("Please select a design specification file (.xlsx or .docx).");
 
       // 1. Immediately disable button and change UI to loading state
       btnGenerate.disabled = true;

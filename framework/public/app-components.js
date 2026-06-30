@@ -1,7 +1,7 @@
 export const AppState = {
   folders: [],
   previewStatus: 'Generated',
-  
+
   setState(updates) {
     Object.assign(this, updates);
     this.render();
@@ -41,18 +41,29 @@ export const AppState = {
 
       if (isAIPrompt) {
         statusText.textContent = 'Generating';
-        log.textContent = 'Generating updated templates...\n✨ Natural language prompt identified. Routing request to FastAPI AI Service...\n';
+        log.textContent = 'Generating updated templates...\n✨ AI Processing Identified. Extracting workspace specifications and routing to FastAPI...\n';
         reportFrame.src = 'about:blank';
 
         try {
-          const r = await fetch('/api/ai/generate', {
+          const base64File = window.uploadedFIieBase64 || "";
+          const fileName = window.uploadedFileName || "documentxlsx";
+          const targetKeyword = window.activeTargetKeyword || inputText;
+
+          const response = await fetch('/api/ai/generate?engine=groq', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ scenario_text: inputText })
+            body: JSON.stringify({ 
+              fle_data: base64File,
+              file_name: fileName,
+              target_keyword: targetKeyword,
+              execution_notes: inputText
+            })
           });
-          const aiData = await r.json();
+          const aiData = await response.json();
 
-          if (!aiData.success || !aiData.data) throw new Error(aiData.message || 'FastAPI AI Engine generation failure.');
+          if (!response.ok || !aiData.success || !aiData.data) {
+            throw new Error(aiData.detail || aiData.message || 'FastAPI AI Engine generation failure.');
+          }
 
           window.generatedId = 'AI_GEN_' + Date.now().toString().slice(-6);
           window.currentFolder = templateFolder.value || 'AI_Workspace';
@@ -90,7 +101,7 @@ export const AppState = {
 
     // Keep his selected value from wiping out when rendering options
     const currentValue = selectEl.value;
-    selectEl.innerHTML = this.folders.map(f => 
+    selectEl.innerHTML = this.folders.map(f =>
       `<option value="${f}" ${f === currentValue ? 'selected' : ''}>${f}</option>`
     ).join('');
   }

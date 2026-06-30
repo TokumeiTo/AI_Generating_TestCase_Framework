@@ -54,36 +54,39 @@ const server = http.createServer(async (req, res) => {
 
     // 🟩 POST HANDLERS
     // -------------------------------------------------------------------
-    // 🌟 GROQ BACKEND GENERATION ROUTER
+    // 🌟 AI BACKEND GENERATION ROUTER
     // -------------------------------------------------------------------
     if (req.method === 'POST' && reqPath === '/api/ai/generate') {
-      let bodyChunks = [];
-      req.on('data', (chunk) => bodyChunks.push(chunk));
+      try {
+        const rawBody = await readBody(req);
+        const parsedBody = JSON.parse(rawBody || '{}');
 
-      req.on('end', async () => {
-        try {
-          const buffer = Buffer.concat(bodyChunks);
-          const parsedBody = JSON.parse(buffer.toString());
 
-          // Extract engine selection from UI payload (default to groq if not provided)
-          const selectedEngine = parsedBody.engine || "none";
+        // Extract engine selection from UI payload (default to groq if not provided)
+        let selectedEngine = (parsedBody.engine || "groq").toLowerCase();
+        if (selectedEngine === 'none') selectedEngine = 'groq';
 
-          // ✅ Pass it as a query parameter (?engine=sealion or ?engine=groq)
-          const fastapiResponse = await fetch(`${FASTAPI_BACKEND_URL}/api/v1/ai/generate-testcase?engine=${selectedEngine}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: buffer
-          });
+        // ✅ Pass it as a query parameter (?engine=sealion or ?engine=groq)
+        const fastapiResponse = await fetch(`${FASTAPI_BACKEND_URL}/api/v1/ai/generate-testcase?engine=${selectedEngine}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_data: parsedBody.file_data || "",
+            file_name: parsedBody.file_name || "document.xlsx",
+            target_keyword: parsedBody.target_keyword || "",
+            execution_notes: parsedBody.execution_notes || ""
+          })
+        });
 
-          const responseText = await fastapiResponse.text();
-          res.writeHead(fastapiResponse.status, { 'Content-Type': 'application/json' });
-          res.end(responseText);
-        } catch (err) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: "Internal Proxy Error" }));
-        }
-      });
-      return;
+        const responseText = await fastapiResponse.text();
+        res.writeHead(fastapiResponse.status, { 'Content-Type': 'application/json' });
+        return res.end(responseText);
+
+      } catch (err) {
+        console.error("❌ Node Engine Proxy Forwarding Exception:", err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, error: `Internal Proxy Error: ${err.message}` }));
+      }
     }
 
     // -------------------------------------------------------------------

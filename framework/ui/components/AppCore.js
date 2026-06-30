@@ -7,13 +7,15 @@ document.addEventListener("DOMContentLoaded", () => {
             // Extract out the active engine selected by the user dropdown view
             const targetEngine = payload.engine || "groq";
 
+            const cleanPayload = {...payload, engine: targetEngine};
+
             const response = await fetch(`${NODE_SERVER_PROXY}/api/ai/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 // Pass the base structure payload data directly upstream
-                body: JSON.stringify(payload)
+                body: JSON.stringify(cleanPayload)
             });
 
             const resData = await response.json();
@@ -39,8 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rows: finalRows }),
-                responseType: 'blob'
             });
+
+            if (!response.ok) throw new Error("Network download response failed.")
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -50,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.appendChild(a);
             a.click();
             a.remove();
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert("Failed parsing Excel document serialization stream.");
         }
