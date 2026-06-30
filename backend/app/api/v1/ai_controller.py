@@ -1,47 +1,54 @@
 import traceback
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
-from app.api.deps import get_excel_parser_service, get_scenario_service
-from app.services.excel_service import ExcelParserService
+from app.api.deps import get_scenario_service
 from app.services.scenario_service import ScenarioService
 
 router = APIRouter(prefix="/ai", tags=["AI Engine"])
 
 class ScenarioRequest(BaseModel):
-    file_data: str                      # Base64 encoded .xlsx file string
-    file_name: str                      # Name of the uploaded file
-    target_keyword: str                 # e.g., 投資目的適合性警告メッセージ
-    execution_notes: Optional[str] = "" # Optional notes
+    file_data: str                                     # Base64 encoded file string
+    file_name: str = Field(..., examples=["doc.docx"]) # Sanitize & validate incoming schema strings
+    target_keyword: str                                # e.g., 投資目的適合性警告メッセージ
+    execution_notes: Optional[str] = ""                # Optional notes
 
 @router.post("/generate-testcase")
 async def generate_testcase(
     request: ScenarioRequest,
-    engine: str = "groq", # Pass ?engine=sealion from frontend query parameters to swap engines!
-    excel_service: ExcelParserService = Depends(get_excel_parser_service),
+    engine: str = "groq", 
     scenario_service: ScenarioService = Depends(get_scenario_service)
 ):
+    # Sanitize inputs at the boundary gate before passing them downward
+    clean_file_name = request.file_name.strip()
+    
     try:
-        # 1. Parse and extract matrix text string via service layer
-        print(f"📁 Loading and trimming file content for keyword: {request.target_keyword}")
-        trimmed_context = await excel_service.parse_and_filter_spec(
-            base64_data=request.file_data, 
-            target_keyword=request.target_keyword
-        )
+        # CRITICAL DEBUG PRINT: Force output to console to see exactly what string your frontend sent
+        print(f"\n[DEBUG] 📁 Received clean file string: '{clean_file_name}'")
+        print(f"[DEBUG] 🚀 Target keyword extraction: '{request.target_keyword}' using engine '{engine}'")
         
-        # 2. Fire Prompt request down through orchestrator engine
-        print(f"🚀 Submitting structured context data to {engine.upper()} model platform...")
         final_grid_rows = await scenario_service.generate_test_cases(
-            context_text=trimmed_context,
+            base64_data=request.file_data,
+            file_name=clean_file_name, # Pass clean version explicitly
             target_keyword=request.target_keyword,
             execution_notes=request.execution_notes,
             provider=engine
         )
         
+        # Check if the service returned a fallback error row instead of actual test cases
+        if final_grid_rows and final_grid_rows[0].get("Category") == "システムエラー":
+            print(f"⚠️ Service Layer internal fallback triggered: {final_grid_rows[0].get('TextItem')}")
+            # Optional: You can choose to throw an actual HTTP error here instead of a faux successful response
+            # raise HTTPException(status_code=400, detail=final_grid_rows[0].get('TextItem'))
+
         return {
             "success": True,
             "data": final_grid_rows
         }
+        
+    except ValueError as ve:
+        print(f"⚠️ Boundary Validation Error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
         
     except Exception as e:
         print("\n❌ API v1 CONTROLLER PIPELINE EXCEPTION:")
